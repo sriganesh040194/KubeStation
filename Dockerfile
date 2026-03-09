@@ -66,7 +66,7 @@ FROM mcr.microsoft.com/mirror/docker/library/debian:stable-slim AS final
 
 LABEL maintainer="kubestation"
 LABEL description="KubeStation — generic CLI tools pod for AKS: kubectl, kubelogin, helm, oc, network, db"
-LABEL org.opencontainers.image.source="https://github.com/your-org/kubestation"
+LABEL org.opencontainers.image.source="https://github.com/sriganesh040194/KubeStation"
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ACCEPT_EULA=Y
