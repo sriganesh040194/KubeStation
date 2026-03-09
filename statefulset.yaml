@@ -1,0 +1,150 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cli-tools
+  namespace: default
+  labels:
+    app: cli-tools
+spec:
+  serviceName: cli-tools
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cli-tools
+
+  # ── Single PVC for all persistent data (/data) ─────────────────────────────
+  # Mounted at /data — persists kubeconfig, scripts, workspace, config files
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: managed-csi       # Azure Disk — default on AKS
+        resources:
+          requests:
+            storage: 5Gi
+
+  template:
+    metadata:
+      labels:
+        app: cli-tools
+    spec:
+      # ── Node placement — update workload label to match your node pool ──────
+      # nodeSelector:
+      #   workload: <your-node-label>
+      # tolerations:
+      #   - key: workload
+      #     operator: Equal
+      #     value: <your-node-label>
+      #     effect: NoSchedule
+      tolerations:
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
+        - key: node.kubernetes.io/memory-pressure
+          operator: Exists
+          effect: NoSchedule
+
+      serviceAccountName: cli-tools-sa
+
+      securityContext:
+        runAsUser: 0
+        runAsNonRoot: false
+        fsGroup: 0
+
+      volumes:
+        # kubeconfig injected from Secret — entrypoint copies to /data/kube/config
+        - name: kube-secret
+          secret:
+            secretName: kubeconfig
+            defaultMode: 0600
+
+      # ── No initContainers needed — all tools baked into the image ───────────
+      containers:
+        - name: cli-tools
+          # ── Replace with your registry image after building ─────────────────
+          # image: <registry>/<image-name>:latest
+          image: kubestation/cli-tools:latest
+          imagePullPolicy: Always
+
+          env:
+            - name: KUBECONFIG
+              value: /data/kube/config
+            - name: HOME
+              value: /root
+            # ── AAD auth method — change to: spn | msi | azurecli | devicecode
+            - name: AUTH_METHOD
+              value: "workloadidentity"
+            # ── SPN auth — populate via Secret if using AUTH_METHOD=spn ───────
+            # - name: AZURE_CLIENT_ID
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: cli-tools-spn
+            #       key: client-id
+            # - name: AZURE_CLIENT_SECRET
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: cli-tools-spn
+            #       key: client-secret
+            # - name: AZURE_TENANT_ID
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: cli-tools-spn
+            #       key: tenant-id
+            - name: ACCEPT_EULA
+              value: "Y"
+
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+
+          volumeMounts:
+            # kubeconfig secret (read-only) — entrypoint copies to /data/kube/
+            - name: kube-secret
+              mountPath: /etc/kube
+              readOnly: true
+            # persistent data volume
+            - name: data
+              mountPath: /data
+
+          livenessProbe:
+            exec:
+              command: [ "bash", "-c", "ps aux | grep tail | grep -v grep" ]
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: true
+
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+
+---
+# ── Headless Service (required by StatefulSet) ────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: cli-tools
+  namespace: default
+  labels:
+    app: cli-tools
+spec:
+  clusterIP: None
+  selector:
+    app: cli-tools
+  ports:
+    - name: placeholder
+      port: 80
+      targetPort: 80
