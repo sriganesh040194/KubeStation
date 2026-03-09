@@ -209,6 +209,12 @@ source /usr/share/bash-completion/bash_completion 2>/dev/null || true
 source <(kubectl completion bash) 2>/dev/null || true
 source <(helm completion bash) 2>/dev/null || true
 
+# kube-helpers — always available
+source /usr/local/share/cli-tools/scripts/kube-helpers.sh 2>/dev/null || true
+
+# User extras from PVC (persisted across restarts)
+source /data/config/.bashrc_extra 2>/dev/null || true
+
 EOF
 
 ENTRYPOINT ["/usr/local/share/cli-tools/entrypoint/entrypoint.sh"]

@@ -12,7 +12,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/kubestation/cli-tools
+  IMAGE_NAME: ${{ github.repository_owner }}/kubestation
 
 jobs:
   build-and-push:
@@ -110,7 +110,7 @@ jobs:
             echo ""
             echo "Pull the image from GitHub Container Registry:"
             echo '```bash'
-            echo "docker pull ghcr.io/${{ github.repository_owner }}/kubestation/cli-tools:${CURRENT_TAG#v}"
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/kubestation:${CURRENT_TAG#v}"
             echo '```'
             echo ""
             echo "**Full image tags published:**"

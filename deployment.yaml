@@ -73,7 +73,7 @@ spec:
 
       containers:
         - name: kubestation
-          image: ghcr.io/sriganesh040194/kubestation/cli-tools:latest
+          image: ghcr.io/sriganesh040194/kubestation:latest
           imagePullPolicy: Always
 
           env:

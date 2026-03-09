@@ -18,10 +18,11 @@ warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
 err()  { echo -e "${RED}[ERROR]${NC} $*"; }
 ok()   { echo -e "${GREEN}[OK]${NC} $*"; }
 
-# ── 1. kubeconfig setup ────────────────────────────────────────────────────────
-log "Setting up kubeconfig..."
+# ── 1. Ensure /data subdirectories exist (PVC mount hides Dockerfile-created dirs)
+mkdir -p /data/kube /data/scripts /data/config /data/workspace /root/.kube /root/.ssh
 
-mkdir -p /data/kube /root/.kube
+# ── 2. kubeconfig setup ────────────────────────────────────────────────────────
+log "Setting up kubeconfig..."
 
 # Priority: mounted secret > existing PVC config > service account token
 if [ -f /etc/kube/config ]; then
@@ -38,7 +39,7 @@ fi
 ln -sf /data/kube/config /root/.kube/config 2>/dev/null || true
 export KUBECONFIG=/data/kube/config
 
-# ── 2. kubelogin — AAD conversion ─────────────────────────────────────────────
+# ── 3. kubelogin — AAD conversion ─────────────────────────────────────────────
 # AUTH_METHOD env var controls the login mode. Set via StatefulSet env or:
 #   kubectl set env statefulset/<name> AUTH_METHOD=spn -n <namespace>
 # Valid values: workloadidentity | spn | azurecli | msi | devicecode
@@ -82,7 +83,7 @@ else
     warn "kubelogin not found or no kubeconfig present — skipping AAD conversion"
 fi
 
-# ── 3. Restore user scripts from PVC ──────────────────────────────────────────
+# ── 4. Restore user scripts from PVC ──────────────────────────────────────────
 # /data/scripts is a persistent volume — any .sh files placed there
 # are sourced into PATH automatically on every startup
 if [ -d /data/scripts ] && [ "$(ls -A /data/scripts/*.sh 2>/dev/null)" ]; then
@@ -91,14 +92,14 @@ if [ -d /data/scripts ] && [ "$(ls -A /data/scripts/*.sh 2>/dev/null)" ]; then
     chmod +x /data/scripts/*.sh 2>/dev/null || true
 fi
 
-# ── 4. Restore custom bashrc/aliases from PVC ─────────────────────────────────
+# ── 5. Restore custom bashrc/aliases from PVC ─────────────────────────────────
 if [ -f /data/config/.bashrc_extra ]; then
     log "Sourcing /data/config/.bashrc_extra..."
     # shellcheck disable=SC1091
     source /data/config/.bashrc_extra || warn "Failed to source .bashrc_extra"
 fi
 
-# ── 5. Print tool inventory ────────────────────────────────────────────────────
+# ── 6. Print tool inventory ────────────────────────────────────────────────────
 v() { $1 "${2:---version}" 2>/dev/null | head -1 | tr -d '\n' || echo "not found"; }
 
 POD_NAMESPACE="${POD_NAMESPACE:-$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace 2>/dev/null || echo 'unknown')}"

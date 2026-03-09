@@ -18,7 +18,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 REGISTRY    ?= ghcr.io/sriganesh040194
-IMAGE_NAME  ?= kubestation/cli-tools
+IMAGE_NAME  ?= kubestation
 TAG         ?= latest
 NAMESPACE   ?= default
 APP_NAME    ?= kubestation
@@ -68,7 +68,7 @@ release: build push
 deploy:
 	@echo "Deploying $(MANIFEST) ($(WORKLOAD)) to namespace $(NAMESPACE)..."
 	sed \
-	  -e 's|ghcr.io/sriganesh040194/$(IMAGE_NAME):latest|$(FULL_IMAGE)|g' \
+	  -e 's|ghcr.io/sriganesh040194/kubestation:latest|$(FULL_IMAGE)|g' \
 	  -e 's|namespace: default|namespace: $(NAMESPACE)|g' \
 	  $(MANIFEST) | kubectl apply -f -
 	kubectl rollout status $(WORKLOAD)/$(APP_NAME) -n $(NAMESPACE)
