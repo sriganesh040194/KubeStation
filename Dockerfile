@@ -138,13 +138,19 @@ RUN apt-get update -qq && \
     && \
     rm -rf /var/lib/apt/lists/*
 
-# ── mssql-tools (sqlcmd / bcp) from Microsoft APT repo ────────────────────────
+# ── Azure CLI + mssql-tools from Microsoft APT repo ───────────────────────────
 RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
       | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && \
     curl -fsSL \
       "https://packages.microsoft.com/config/debian/12/prod.list" \
       -o /etc/apt/sources.list.d/mssql-release.list && \
+    curl -fsSL \
+      "https://packages.microsoft.com/repos/azure-cli/dists/bookworm/Release" \
+      -o /dev/null 2>/dev/null && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/repos/azure-cli bookworm main" \
+      > /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update -qq && \
+    apt-get install -y -qq --no-install-recommends azure-cli && \
     ACCEPT_EULA=Y apt-get install -y -qq mssql-tools18 unixodbc-dev 2>/dev/null || \
     ACCEPT_EULA=Y apt-get install -y -qq mssql-tools   unixodbc-dev 2>/dev/null || \
     echo "WARN: mssql-tools unavailable — skipping" && \

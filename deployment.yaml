@@ -6,22 +6,32 @@
 # For persistent sessions (saved kubeconfig, docker/gh login, scripts),
 # use statefulset.yaml instead.
 # ─────────────────────────────────────────────────────────────────────────────
+# ── ServiceAccount ────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubestation-sa
+  namespace: default
+  labels:
+    app: kubestation
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cli-tools
+  name: kubestation
   namespace: default
   labels:
-    app: cli-tools
+    app: kubestation
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: cli-tools
+      app: kubestation
   template:
     metadata:
       labels:
-        app: cli-tools
+        app: kubestation
     spec:
       # ── Node placement — update workload label to match your node pool ──────
       # nodeSelector:
@@ -44,7 +54,7 @@ spec:
           operator: Exists
           effect: NoSchedule
 
-      serviceAccountName: cli-tools-sa
+      serviceAccountName: kubestation-sa
 
       securityContext:
         runAsUser: 0
@@ -62,10 +72,8 @@ spec:
           emptyDir: {}
 
       containers:
-        - name: cli-tools
-          # ── Replace with your registry image after building ─────────────────
-          # image: <registry>/<image-name>:latest
-          image: kubestation/cli-tools:latest
+        - name: kubestation
+          image: ghcr.io/sriganesh040194/kubestation/cli-tools:latest
           imagePullPolicy: Always
 
           env:
@@ -73,24 +81,24 @@ spec:
               value: /data/kube/config
             - name: HOME
               value: /root
-            # ── AAD auth method — change to: spn | msi | azurecli | devicecode
+            # ── AAD auth method — change to: spn | msi | workloadidentity | devicecode
             - name: AUTH_METHOD
-              value: "workloadidentity"
+              value: "azurecli"
             # ── SPN auth — populate via Secret if using AUTH_METHOD=spn ───────
             # - name: AZURE_CLIENT_ID
             #   valueFrom:
             #     secretKeyRef:
-            #       name: cli-tools-spn
+            #       name: kubestation-spn
             #       key: client-id
             # - name: AZURE_CLIENT_SECRET
             #   valueFrom:
             #     secretKeyRef:
-            #       name: cli-tools-spn
+            #       name: kubestation-spn
             #       key: client-secret
             # - name: AZURE_TENANT_ID
             #   valueFrom:
             #     secretKeyRef:
-            #       name: cli-tools-spn
+            #       name: kubestation-spn
             #       key: tenant-id
             - name: ACCEPT_EULA
               value: "Y"

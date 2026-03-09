@@ -17,11 +17,11 @@
 #   make deploy MANIFEST=deployment.yaml  (ephemeral — uses deployment.yaml)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-REGISTRY    ?= your-registry.example.com
+REGISTRY    ?= ghcr.io/sriganesh040194
 IMAGE_NAME  ?= kubestation/cli-tools
 TAG         ?= latest
 NAMESPACE   ?= default
-APP_NAME    ?= cli-tools
+APP_NAME    ?= kubestation
 MANIFEST    ?= statefulset.yaml
 
 # Pod name differs by workload type: StatefulSet uses <name>-0, Deployment uses random suffix
@@ -67,8 +67,10 @@ release: build push
 ## Ephemeral:            make deploy MANIFEST=deployment.yaml
 deploy:
 	@echo "Deploying $(MANIFEST) ($(WORKLOAD)) to namespace $(NAMESPACE)..."
-	sed 's|$(IMAGE_NAME):latest|$(FULL_IMAGE)|g' $(MANIFEST) \
-	  | kubectl apply -f -
+	sed \
+	  -e 's|ghcr.io/sriganesh040194/$(IMAGE_NAME):latest|$(FULL_IMAGE)|g' \
+	  -e 's|namespace: default|namespace: $(NAMESPACE)|g' \
+	  $(MANIFEST) | kubectl apply -f -
 	kubectl rollout status $(WORKLOAD)/$(APP_NAME) -n $(NAMESPACE)
 
 ## Tail pod logs
